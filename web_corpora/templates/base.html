@@ -1,0 +1,31 @@
+{% extends 'bootstrap/base.html' %}
+
+{% block title %}
+    {% if title %}{{ title }} - Corpora{% endif %}
+{% endblock %}
+
+{% block navbar %}
+    <nav class="navbar navbar-default">
+        <h1>ПЫРКОЛЫ</h1>
+    </nav>
+{% endblock %}
+
+{% block content %}
+    <form method="post">
+    <p>Enter your query:</p>
+    <input type="text" name="query" id="query" class="form-control"><br>
+    {% if query %}<h2>{{query}}</h2>{% endif %}
+    <div class="container">
+        {% if result %}
+            {% for i in result %}
+            <div class="alert alert-info" role="alert">
+                {{ i[0] + ' '}}<b>{{ i[1] + ' '}}</b>{{ i[2]}}
+            </div>
+            {% endfor %}
+        {% endif %}
+
+        {# содержимое приложения которое должно быть предоставлено в блоке app_content #}
+        {% block app_content %}{% endblock %}
+    </div>
+{% endblock %}
+41
