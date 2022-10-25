@@ -1,4 +1,7 @@
-from curses.ascii import isupper
+import spacy
+import nltk
+from tqdm import tqdm
+from curses.ascii import isalpha, isupper
 from re import T
 from turtle import right
 import pandas as pd
@@ -7,16 +10,13 @@ from string import punctuation
 punctuation = set(punctuation)
 punctuation.add('\n')
 punctuation.add(' ')
-from tqdm import tqdm
-import nltk
-import spacy
 nlp = spacy.load("en_core_web_sm")
 
 
 with open("indexes.json", 'r', encoding="utf-8") as f,\
-    open("texts.json", 'r', encoding="utf-8") as t:
-        indexes = json.load(f)
-        texts = json.load(t)
+        open("texts.json", 'r', encoding="utf-8") as t:
+    indexes = json.load(f)
+    texts = json.load(t)
 
 
 # индексация
@@ -38,7 +38,7 @@ def index_df(df: pd.DataFrame):
         count += 1
 
     with open("indexes.json", 'w', encoding="utf-8") as f,\
-        open("texts.json", 'w', encoding="utf-8") as t:
+            open("texts.json", 'w', encoding="utf-8") as t:
         f.write(json.dumps(indexes, ensure_ascii=False, indent=2))
         t.write(json.dumps(texts, ensure_ascii=False, indent=2))
 
@@ -47,6 +47,17 @@ class Searcher:
     def __init__(self, index=indexes, texts=texts) -> None:
         self.index = index
         self.texts = texts
+    
+    def get_texts(self, word: str):
+        word = word.strip('"').lower()
+        doc = nlp(word)
+        for i in doc:
+            lemma = i.lemma_
+        if lemma in self.index:
+            text_ids = [x for x in self.index[lemma]]
+            texts_raw = [self.texts[str(x)] for x in self.index[lemma]]
+        
+        return text_ids, texts_raw
 
     def search(query: str):
         '''
@@ -55,9 +66,10 @@ class Searcher:
         Плюс в функцию нужно добавить аргумент required_prev_word, который показывает после чего мы ищем нужное слово.
         '''
         query = query.split()
+        if query[0].isalpha() or '"' in query[0] or '+' in query[0]:    # проверяем есть ли слово(?) в первой части запроса, чтобы ограничить число текстов
+            pass
 
-
-    def check(word: str, query: str):
+    def check(word: str, query: str):   # функция проверяющая слово на соответствие запросу
         word = word.lower()
         if '+' in query:            # для запросов типа 'знать+NOUN'
             w, p = query.split('+')
@@ -68,21 +80,21 @@ class Searcher:
                 return True
             else:
                 return False
-        
+
         elif '"' in query:          # для точных запросов
             w = query.strip('"').lower()
             if word == w:
                 return True
             else:
                 return False
-        
+
         elif query.isupper():       # для запросов типа VERB
             pos = nlp(word)[0].pos_
             if pos == query:
                 return True
             else:
                 return False
-        
+
         else:                       # для поиска со всеми словоформами
             lemma = nlp(word)[0].lemma_
             w = nlp(query)[0].lemma_
@@ -90,8 +102,6 @@ class Searcher:
                 return True
             else:
                 return False
-        
-
 
     # поиск со всеми словоформами
 
@@ -118,12 +128,12 @@ class Searcher:
                             found = True
                         else:
                             right += token.text + ' '
-                    
+
                     if center == '':
                         continue
 
                     out.append((left, center, right))
-            
+
             return out
 
         return []
@@ -152,29 +162,27 @@ class Searcher:
                             found = True
                         else:
                             right += token.text + ' '
-                    
+
                     if center == '':
                         continue
 
                     out.append((left, center, right))
-            
+
             return out
 
         return []
 
 
-
 # запуск кода для теста
-
 if __name__ == "__main__":
     data = pd.read_excel("xlsx_corpus.xlsx")
     # index_df(data)
-    
+
     with open("indexes.json", 'r', encoding="utf-8") as f,\
-        open("texts.json", 'r', encoding="utf-8") as t:
-            indexes = json.load(f)
-            texts = json.load(t)
-    
+            open("texts.json", 'r', encoding="utf-8") as t:
+        indexes = json.load(f)
+        texts = json.load(t)
+
     # print(strict_search('"bad"', indexes, texts))
     print(texts["373"])
     print(data.iloc[[373]])
