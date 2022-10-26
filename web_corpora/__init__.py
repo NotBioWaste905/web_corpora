@@ -1,4 +1,5 @@
-from search import strict_search
+from search import Searcher
+s = Searcher()
 from flask import Flask
 from flask import url_for, render_template, request, redirect
 from flask_bootstrap import Bootstrap
@@ -21,5 +22,9 @@ def results(query=None):
     if request.method == "POST":
         query_ = request.form["query"]
         return redirect(url_for(f'results', query=query_))
-    res = strict_search(query)
+    res = s.search(query)
     return render_template('base.html', title="Reviews", result=res, query=query)
+
+@app.route('/texts=<id>', methods=['POST', 'GET'])
+def texts(id=None):
+    return render_template('text.html', meta=s.get_meta(int(id)))

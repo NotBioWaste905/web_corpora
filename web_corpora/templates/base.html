@@ -11,21 +11,21 @@
 {% endblock %}
 
 {% block content %}
-    <form method="post">
+    <form method="post" margin=30%>
     <p>Enter your query:</p>
     <input type="text" name="query" id="query" class="form-control"><br>
     {% if query %}<h2>{{query}}</h2>{% endif %}
     <div class="container">
         {% if result %}
             {% for i in result %}
-            <div class="alert alert-info" role="alert">
-                {{ i[0] + ' '}}<b>{{ i[1] + ' '}}</b>{{ i[2]}}
-            </div>
+            <a href="texts={{i[3]}}">
+                <div class="alert alert-info">
+                    {{ i[0] + ' '}}<b>{{ i[1] + ' '}}</b>{{ i[2]}}
+                </div>
+            </a>
+            
             {% endfor %}
         {% endif %}
 
-        {# содержимое приложения которое должно быть предоставлено в блоке app_content #}
-        {% block app_content %}{% endblock %}
     </div>
 {% endblock %}
-41
