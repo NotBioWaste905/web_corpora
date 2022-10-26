@@ -1,9 +1,6 @@
 import spacy
 import nltk
 from tqdm import tqdm
-from curses.ascii import isalpha, isupper
-from re import T
-from turtle import right
 import pandas as pd
 import json
 from string import punctuation
@@ -43,65 +40,103 @@ def index_df(df: pd.DataFrame):
         t.write(json.dumps(texts, ensure_ascii=False, indent=2))
 
 
+def check(word: str, query: str):   # функция проверяющая слово на соответствие запросу
+    word = word.lower()
+    if '+' in query:            # для запросов типа 'знать+NOUN'
+        w, p = query.split('+')
+        w = w.lower()
+        pos = nlp(word)[0].pos_
+        lemma = nlp(word)[0].lemma_
+        if lemma == w and pos == p:
+            return True
+        else:
+            return False
+
+    elif '"' in query:          # для точных запросов
+        w = query.strip('"').lower()
+        if word == w:
+            return True
+        else:
+            return False
+
+    elif query.isupper():       # для запросов типа VERB
+        pos = nlp(word)[0].pos_
+        if pos == query:
+            return True
+        else:
+            return False
+
+    else:                       # для поиска со всеми словоформами
+        lemma = nlp(word)[0].lemma_
+        w = nlp(query)[0].lemma_
+        if lemma == w:
+            return True
+        else:
+            return False
+
+
 class Searcher:
     def __init__(self, index=indexes, texts=texts) -> None:
-        self.index = index
-        self.texts = texts
-    
+        self.index = index      # индексы текстов
+        self.texts = texts      # эээ не помню че это
+
+    # принимает на вход слово и выдает кортеж (id текстов в которых встречается; сами тексты)
     def get_texts(self, word: str):
-        word = word.strip('"').lower()
+        word = word.lower()
         doc = nlp(word)
         for i in doc:
             lemma = i.lemma_
         if lemma in self.index:
             text_ids = [x for x in self.index[lemma]]
             texts_raw = [self.texts[str(x)] for x in self.index[lemma]]
-        
+
         return text_ids, texts_raw
 
-    def search(query: str):
+    def search(self, query: str):
         '''
         Делим запрос на несколько подзапросов, каждый со своими правилами(?).
-        Находим все предложения удовлетворяющие первый запрос. Они становятся пулом из которого мы будем выбирать предложения по другим запросам.
-        Плюс в функцию нужно добавить аргумент required_prev_word, который показывает после чего мы ищем нужное слово.
         '''
-        query = query.split()
-        if query[0].isalpha() or '"' in query[0] or '+' in query[0]:    # проверяем есть ли слово(?) в первой части запроса, чтобы ограничить число текстов
-            pass
+        query = query.split(' ')
+        texts_ids_ = set()       # здесь будут храниться id текстов котoрые подходят по набору слов
+        output = []
 
-    def check(word: str, query: str):   # функция проверяющая слово на соответствие запросу
-        word = word.lower()
-        if '+' in query:            # для запросов типа 'знать+NOUN'
-            w, p = query.split('+')
-            w = w.lower()
-            pos = nlp(word)[0].pos_
-            lemma = nlp(word)[0].lemma_
-            if lemma == w and pos == p:
-                return True
-            else:
-                return False
+        for part in query:
+            # проверяем есть ли слово(?) в первой части запроса, чтобы ограничить число текстов
+            if part.islower() or '"' in part or '+' in part:
+                word = part.strip('"').split('+')[0]
+                if texts_ids_:
+                    texts_ids_ = texts_ids_.intersection(set(self.get_texts(word)[0]))
+                else:
+                    texts_ids_ = set(self.get_texts(word)[0])
 
-        elif '"' in query:          # для точных запросов
-            w = query.strip('"').lower()
-            if word == w:
-                return True
-            else:
-                return False
+        # находим в каждом тексте интересующий нас паттерн
+        for txt, id in tqdm([(self.texts[str(x)], x) for x in texts_ids_]):
+            sentences = nltk.sent_tokenize(txt)
+            for s in sentences:
+                # суда всо из lemma_search() но штобы работало через check()
+                left, center, right, text_id = '', '', '', 0  # поля для вывода
+                words = [x for x in nltk.word_tokenize(s) if x not in punctuation]
+                count = 0
+                for i in range(len(words)-len(query)):  # идем по словам
+                    # начиная с каждого слова ищем нужный нам паттерн
+                    for j in range(len(query)):
+                        if check(words[i+count], query[j]):
+                            center += words[i+count] + ' '
+                            count += 1
+                        else:
+                            center = ''
+                            count = 0
+                            break
+                    else:   # попадаем сюда в случае, если нужный паттерн найден
+                        left = ' '.join(words[:i])
+                        right = ' '.join(words[i+len(query):])
+                        text_id = id
+                        count = 0
+                        output.append((left, center, right, text_id))
+        
+        return output
 
-        elif query.isupper():       # для запросов типа VERB
-            pos = nlp(word)[0].pos_
-            if pos == query:
-                return True
-            else:
-                return False
 
-        else:                       # для поиска со всеми словоформами
-            lemma = nlp(word)[0].lemma_
-            w = nlp(query)[0].lemma_
-            if lemma == w:
-                return True
-            else:
-                return False
 
     # поиск со всеми словоформами
 
@@ -175,7 +210,7 @@ class Searcher:
 
 # запуск кода для теста
 if __name__ == "__main__":
-    data = pd.read_excel("xlsx_corpus.xlsx")
+    # data = pd.read_excel("xlsx_corpus.xlsx")
     # index_df(data)
 
     with open("indexes.json", 'r', encoding="utf-8") as f,\
@@ -183,6 +218,5 @@ if __name__ == "__main__":
         indexes = json.load(f)
         texts = json.load(t)
 
-    # print(strict_search('"bad"', indexes, texts))
-    print(texts["373"])
-    print(data.iloc[[373]])
+    s = Searcher(indexes, texts)
+    print(s.search('bad film'))
