@@ -14,7 +14,8 @@ with open("indexes.json", 'r', encoding="utf-8") as f,\
         open("texts.json", 'r', encoding="utf-8") as t:
     indexes = json.load(f)
     texts = json.load(t)
-data = pd.read_excel("xlsx_corpus.xlsx")
+# data = pd.read_excel("xlsx_corpus.xlsx")
+data = pd.read_csv("corpus.csv", sep=",", header=None)
 
 # индексация
 
@@ -46,6 +47,7 @@ def check(word: str, query: str):
     if '+' in query:            # для запросов типа 'знать+NOUN'
         w, p = query.split('+')
         w = w.lower()
+        # doc = nlp(sent)
         pos = nlp(word)[0].pos_
         lemma = nlp(word)[0].lemma_
         if lemma == w and pos == p:
@@ -115,14 +117,15 @@ class Searcher:
                 else:
                     texts_ids_ = set(self.get_texts(word)[0])
 
+        if not texts_ids_:  # если слов в запросе не было, то и тексты мы берем все
+            texts_ids_ = set([x for x in self.texts])
+
         # находим в каждом тексте интересующий нас паттерн
         for txt, id in tqdm([(self.texts[str(x)], x) for x in texts_ids_]):
             sentences = nltk.sent_tokenize(txt)
             for s in sentences:
-                # суда всо из lemma_search() но штобы работало через check()
                 left, center, right, text_id = '', '', '', 0  # поля для вывода
-                words = [x for x in nltk.word_tokenize(
-                    s) if x not in punctuation]
+                words = [x for x in nltk.word_tokenize(s) if x not in punctuation]
                 count = 0
                 for i in range(len(words)-len(query)):  # идем по словам
                     # начиная с каждого слова ищем нужный нам паттерн
@@ -146,7 +149,8 @@ class Searcher:
 
 # запуск кода для теста
 if __name__ == "__main__":
-    data = pd.read_excel("xlsx_corpus.xlsx")
+    # data = pd.read_excel("xlsx_corpus.xlsx")
+    data = pd.read_csv("corpus.csv", sep=",", header=None)
     # index_df(data)
 
     with open("indexes.json", 'r', encoding="utf-8") as f,\
