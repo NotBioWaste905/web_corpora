@@ -14,7 +14,6 @@ with open("indexes.json", 'r', encoding="utf-8") as f,\
         open("texts.json", 'r', encoding="utf-8") as t:
     indexes = json.load(f)
     texts = json.load(t)
-# data = pd.read_excel("xlsx_corpus.xlsx")
 data = pd.read_csv("corpus.csv", sep=",", header=None)
 
 # индексация
