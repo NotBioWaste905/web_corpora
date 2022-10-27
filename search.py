@@ -124,7 +124,7 @@ class Searcher:
             sentences = nltk.sent_tokenize(txt)
             for s in sentences:
                 left, center, right, text_id = '', '', '', 0  # поля для вывода
-                words = [x for x in nltk.word_tokenize(s) if x not in punctuation]
+                words = [x for x in nltk.word_tokenize(s)]
                 count = 0
                 for i in range(len(words)-len(query)):  # идем по словам
                     # начиная с каждого слова ищем нужный нам паттерн
